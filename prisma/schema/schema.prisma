@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+model Devotion {
+  id             String    @id @default(cuid()) @map("_id")
+  title          String
+  content        String
+  verse_reference String?   @map("scriptureReference")
+  scriptureText  String?
+  date           DateTime  @default(now()) @db.Timestamptz
+  imageUrl       String?
+  readTime       String?
+  author         String
+  created_at     DateTime  @default(now()) @db.Timestamptz
+  devotion_date  DateTime  @db.Timestamptz
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+}
+
+model PrayerRequest {
+  id          String    @id @default(cuid()) @map("_id")
+  title       String
+  description String
+  isAnonymous Boolean   @default(false)
+  status      String    @default("active") // active, answered, closed
+  prayerCount Int       @default(0)
+  created_at  DateTime  @default(now()) @db.Timestamptz
+  updated_at  DateTime  @updatedAt @db.Timestamptz
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  prayers     Prayer[]
+
+  @@map("prayer_request")
+}
+
+model Prayer {
+  id               String        @id @default(cuid()) @map("_id")
+  created_at       DateTime      @default(now()) @db.Timestamptz
+  userId           String
+  prayerRequestId  String
+  user             User          @relation(fields: [userId], references: [id])
+  prayerRequest    PrayerRequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, prayerRequestId]) // Prevent duplicate prayers from same user
+  @@map("prayer")
+}
+
+model CounselingRequest {
+  id          String    @id @default(cuid()) @map("_id")
+  subject     String
+  message     String
+  urgency     String    @default("normal") // "normal" or "urgent"
+  isAnonymous Boolean   @default(false)
+  status      String    @default("pending") // "pending", "in_progress", "resolved", "closed"
+  response    String?   // Counselor's response
+  created_at  DateTime  @default(now()) @db.Timestamptz
+  updated_at  DateTime  @updatedAt @db.Timestamptz
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@map("counseling_request")
+}

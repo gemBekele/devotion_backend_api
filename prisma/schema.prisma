@@ -1,0 +1,140 @@
+// Main Prisma schema file that combines auth and main schemas
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+// Import the auth models
+model User {
+  id            String         @id @map("_id")
+  name          String
+  email         String
+  emailVerified Boolean
+  image         String?
+  role          String         @default("user") // "user" or "admin"
+  createdAt     DateTime
+  updatedAt     DateTime
+  sessions      Session[]
+  accounts      Account[]
+  devotions     Devotion[]
+  prayerRequests PrayerRequest[]
+  prayers       Prayer[]
+  counselingRequests CounselingRequest[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @map("_id")
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @map("_id")
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @map("_id")
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+// Import the main models
+model Devotion {
+  id             String    @id @default(cuid()) @map("_id")
+  title          String
+  content        String
+  verse_reference String?   @map("scriptureReference")
+  scriptureText  String?
+  date           DateTime  @default(now()) @db.Timestamptz
+  imageUrl       String?
+  readTime       String?
+  author         String
+  created_at     DateTime  @default(now()) @db.Timestamptz
+  devotion_date  DateTime  @db.Timestamptz
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+
+  @@map("devotion")
+}
+
+model PrayerRequest {
+  id          String    @id @default(cuid()) @map("_id")
+  title       String
+  description String
+  isAnonymous Boolean   @default(false)
+  status      String    @default("active") // active, answered, closed
+  prayerCount Int       @default(0)
+  created_at  DateTime  @default(now()) @db.Timestamptz
+  updated_at  DateTime  @updatedAt @db.Timestamptz
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  prayers     Prayer[]
+
+  @@map("prayer_request")
+}
+
+model Prayer {
+  id               String        @id @default(cuid()) @map("_id")
+  created_at       DateTime      @default(now()) @db.Timestamptz
+  userId           String
+  prayerRequestId  String
+  user             User          @relation(fields: [userId], references: [id])
+  prayerRequest    PrayerRequest @relation(fields: [prayerRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, prayerRequestId]) // Prevent duplicate prayers from same user
+  @@map("prayer")
+}
+
+model CounselingRequest {
+  id          String    @id @default(cuid()) @map("_id")
+  subject     String
+  message     String
+  urgency     String    @default("normal") // "normal" or "urgent"
+  isAnonymous Boolean   @default(false)
+  status      String    @default("pending") // "pending", "in_progress", "resolved", "closed"
+  response    String?   // Counselor's response
+  created_at  DateTime  @default(now()) @db.Timestamptz
+  updated_at  DateTime  @updatedAt @db.Timestamptz
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@map("counseling_request")
+}

@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: devotion-api
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build && npx prisma generate
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: devotion-db
+          property: connectionString
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: BETTER_AUTH_URL
+        value: https://devotion-api.onrender.com
+      - key: BETTER_AUTH_TRUSTED_ORIGINS
+        value: https://devotion-api.onrender.com
+
+databases:
+  - name: devotion-db
+    plan: free
+    databaseName: devotion
+    user: devotion_user
